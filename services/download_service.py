@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import aiohttp
 
 from services import url_validator as uv
+from services.streaming_downloader import StreamingDownloader
 from utils.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -20,13 +21,31 @@ class DownloadResult:
     filename: str
     size_bytes: int
     mime_type: str | None
+    title: str | None = None
+    artist: str | None = None
 
 
 class DownloadService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+        self._streaming = StreamingDownloader(
+            download_dir=settings.download_dir,
+            max_file_mb=settings.max_file_mb,
+        )
 
     async def probe_and_download(self, url: str) -> DownloadResult:
+        # Check if this is a streaming platform URL
+        if uv.is_streaming_url(url):
+            logger.info("Using streaming downloader for: %s", url)
+            result = await self._streaming.download(url)
+            return DownloadResult(
+                path=result.path,
+                filename=result.filename,
+                size_bytes=result.size_bytes,
+                mime_type="audio/mpeg",  # yt-dlp converts to mp3
+                title=result.title,
+                artist=result.artist,
+            )
         timeout = aiohttp.ClientTimeout(
             total=None,
             sock_connect=self._settings.http_head_timeout_sec,

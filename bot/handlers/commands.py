@@ -54,9 +54,17 @@ async def _process_new_url(message: Message, db: Database, download: DownloadSer
             error_message=None,
         )
         await status_msg.delete()
+        # Build caption with metadata if available
+        caption_parts = [f"Добавлено в TG Music bot (id {track_id})."]
+        if result.title:
+            caption_parts.append(f"🎵 {result.title}")
+        if result.artist:
+            caption_parts.append(f"👤 {result.artist}")
+        caption = "\n".join(caption_parts)
+        
         await message.answer_document(
             FSInputFile(result.path),
-            caption=f"Добавлено в TG Music bot (id {track_id}).",
+            caption=caption,
         )
     except (ValueError, OSError, TimeoutError) as e:
         logger.exception("Download failed for track %s", track_id)
@@ -79,10 +87,14 @@ async def _process_new_url(message: Message, db: Database, download: DownloadSer
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
     await message.answer(
-        "Привет! Я TG Music bot — бот для ссылок на треки.\n\n"
-        "Отправьте прямую ссылку на аудиофайл (http/https), и я сохраню её и "
-        "при возможности скачаю и пришлю файл.\n"
-        "Стриминговые сервисы и обход ограничений не поддерживаются.\n\n"
+        "🎧 Привет! Я TG Music bot — бот для диджеев.\n\n"
+        "Отправь ссылку на трек и я скачаю его в лучшем качестве:\n"
+        "• YouTube / YouTube Music\n"
+        "• SoundCloud\n" 
+        "• Spotify\n"
+        "• Яндекс.Музыка\n"
+        "• Bandcamp\n\n"
+        "Также поддерживаются прямые ссылки на .mp3, .flac и др.\n\n"
         "Команды: /help, /add, /list, /delete, /status"
     )
 
@@ -90,14 +102,20 @@ async def cmd_start(message: Message) -> None:
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
     await message.answer(
+        "🎧 TG Music Bot — скачивание музыки для диджеев\n\n"
+        "Поддерживаемые платформы:\n"
+        "• YouTube / YouTube Music\n"
+        "• SoundCloud\n"
+        "• Spotify\n"
+        "• Яндекс.Музыка\n"
+        "• Bandcamp\n"
+        "• Прямые ссылки на .mp3, .flac, .wav\n\n"
         "Команды:\n"
-        "/add <url> — сохранить ссылку и попытаться скачать прямой аудиофайл\n"
-        "/list — последние записи вашей библиотеки\n"
-        "/delete <id> — удалить запись по номеру из /list\n"
-        "/status — состояние бота и статистика по вашим записям\n\n"
-        "Можно просто отправить URL сообщением (как с /add).\n\n"
-        "Поддерживаются только прямые ссылки на файлы с известными аудио-расширениями "
-        "или корректным Content-Type. При заданном ALLOWED_HOSTS домен должен быть в списке."
+        "/add <url> — скачать трек по ссылке\n"
+        "/list — твоя библиотека (последние 20)\n"
+        "/delete <id> — удалить трек по номеру\n"
+        "/status — статистика\n\n"
+        "Просто отправь ссылку сообщением — бот поймёт."
     )
 
 
@@ -112,7 +130,14 @@ async def cmd_add(
     raw = (command.args or "").strip()
     url = _extract_url(raw) if raw else None
     if not url:
-        await message.answer("Использование: /add https://example.com/track.mp3")
+        await message.answer(
+            "Отправь ссылку на трек:\n"
+            "• YouTube: https://youtube.com/watch?v=...\n"
+            "• SoundCloud: https://soundcloud.com/artist/track\n"
+            "• Spotify: https://open.spotify.com/track/...\n"
+            "• Яндекс.Музыка: https://music.yandex.ru/album/...\n"
+            "• Или прямую ссылку на .mp3"
+        )
         return
     await _process_new_url(message, db, download_service, settings, url)
 

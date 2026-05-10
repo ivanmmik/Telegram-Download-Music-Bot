@@ -3,19 +3,24 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-BLOCKED_HOST_SUFFIXES: tuple[str, ...] = (
+# Streaming platforms that need special handling (yt-dlp)
+STREAMING_HOST_SUFFIXES: tuple[str, ...] = (
     "youtube.com",
     "youtu.be",
     "music.youtube.com",
     "spotify.com",
     "soundcloud.com",
+    "music.yandex.ru",
+    "music.yandex.com",
     "music.apple.com",
     "itunes.apple.com",
     "deezer.com",
     "tidal.com",
     "bandcamp.com",
-    "vk.com",
-    "vk.ru",
+)
+
+# Truly blocked hosts (social media without audio focus)
+BLOCKED_HOST_SUFFIXES: tuple[str, ...] = (
     "ok.ru",
     "rutube.ru",
     "instagram.com",
@@ -40,6 +45,24 @@ def _host_blocked(host: str) -> bool:
     return False
 
 
+def _is_streaming_host(host: str) -> bool:
+    """Check if host is a streaming platform (YouTube, Spotify, etc)."""
+    h = host.lower()
+    for suffix in STREAMING_HOST_SUFFIXES:
+        if h == suffix or h.endswith("." + suffix):
+            return True
+    return False
+
+
+def is_streaming_url(url: str) -> bool:
+    """Check if URL is from a supported streaming platform."""
+    parsed = urlparse(url.strip())
+    host = parsed.hostname
+    if not host:
+        return False
+    return _is_streaming_host(host)
+
+
 def _looks_like_audio_path(path: str) -> bool:
     lower = path.lower().split("?", 1)[0]
     return any(lower.endswith(ext) for ext in AUDIO_EXTENSIONS)
@@ -59,8 +82,8 @@ def validate_url_for_download(
     allowed_hosts: frozenset[str],
 ) -> None:
     """
-    Raises UrlValidationError if the URL must not be downloaded
-    (streaming platforms, unsupported scheme, host policy).
+    Raises UrlValidationError if the URL must not be downloaded.
+    Streaming platforms (YouTube, Spotify, etc.) are now allowed.
     """
     validate_url_string(url)
     parsed = urlparse(url.strip())
@@ -69,10 +92,10 @@ def validate_url_for_download(
         raise UrlValidationError("Не удалось определить хост ссылки.")
     if _host_blocked(host):
         raise UrlValidationError(
-            "Этот источник не поддерживается: загрузка со стриминговых "
-            "и социальных платформ недоступна. Пришлите прямую ссылку на аудиофайл "
-            "(например .mp3, .flac), если у вас есть право на её использование."
+            "Этот источник не поддерживается."
         )
+    # Note: streaming platforms (YouTube, Spotify, etc.) are handled separately
+    # and are allowed through this validation
     if allowed_hosts and host.lower() not in allowed_hosts:
         raise UrlValidationError(
             "Домен не входит в список разрешённых источников (ALLOWED_HOSTS). "
