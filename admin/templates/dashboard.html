@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>TG Music bot — Admin</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; background: #0f1419; color: #e7ecf3; }
+    a { color: #7ab8ff; }
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 1rem; margin-top: 2rem; color: #9fb3c8; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { border-bottom: 1px solid #243044; padding: 0.45rem 0.35rem; text-align: left; vertical-align: top; }
+    th { color: #9fb3c8; font-weight: 600; }
+    .pill { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 999px; background: #243044; font-size: 0.75rem; }
+    .stats { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0 1rem; }
+    .muted { color: #7d8da1; font-size: 0.8rem; }
+    code { background: #1b2430; padding: 0.1rem 0.25rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>TG Music bot — очередь и треки</h1>
+  {% if need_token %}
+  <p class="muted">Доступ защищён: добавьте <code>?token=…</code> или заголовок <code>X-Admin-Token</code>.</p>
+  {% endif %}
+
+  <h2>Статусы</h2>
+  <div class="stats">
+    {% for k, v in stats.items() %}
+      <span class="pill">{{ k }}: {{ v }}</span>
+    {% else %}
+      <span class="muted">нет данных</span>
+    {% endfor %}
+  </div>
+
+  <h2>Очередь (pending / downloading)</h2>
+  <table>
+    <thead><tr><th>id</th><th>user</th><th>status</th><th>url</th><th>error</th><th>updated</th></tr></thead>
+    <tbody>
+      {% for t in queue %}
+      <tr>
+        <td>{{ t.id }}</td>
+        <td>{{ t.telegram_user_id }}</td>
+        <td>{{ t.status.value }}</td>
+        <td>{{ t.url }}</td>
+        <td>{{ t.error_message or '' }}</td>
+        <td class="muted">{{ t.updated_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">очередь пуста</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Последние треки</h2>
+  <table>
+    <thead><tr><th>id</th><th>user</th><th>status</th><th>file</th><th>size</th><th>url</th><th>created</th></tr></thead>
+    <tbody>
+      {% for t in tracks %}
+      <tr>
+        <td>{{ t.id }}</td>
+        <td>{{ t.telegram_user_id }}</td>
+        <td>{{ t.status.value }}</td>
+        <td>{{ t.stored_filename or '—' }}</td>
+        <td>{{ t.file_size_bytes or '—' }}</td>
+        <td>{{ t.url[:120] }}{% if t.url|length > 120 %}…{% endif %}</td>
+        <td class="muted">{{ t.created_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">нет записей</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

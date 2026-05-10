@@ -1,0 +1,40 @@
+services:
+  bot:
+    build: .
+    container_name: tg_music_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - tg_music_data:/app/data
+      - tg_music_downloads:/app/downloads
+    command: ["python", "-m", "bot.main"]
+
+  admin:
+    build: .
+    container_name: tg_music_bot_admin
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
+    ports:
+      - "${ADMIN_PORT:-8080}:8080"
+    volumes:
+      - tg_music_data:/app/data
+      - tg_music_downloads:/app/downloads
+    command:
+      [
+        "uvicorn",
+        "admin.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8080",
+      ]
+
+volumes:
+  tg_music_data:
+  tg_music_downloads:
